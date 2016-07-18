@@ -15,11 +15,14 @@
  */
 package com.example.amin.exopalyer3.player;
 
+import com.google.android.exoplayer.C;
 import com.google.android.exoplayer.DefaultLoadControl;
 import com.google.android.exoplayer.LoadControl;
 import com.google.android.exoplayer.MediaCodecAudioTrackRenderer;
 import com.google.android.exoplayer.MediaCodecSelector;
 import com.google.android.exoplayer.MediaCodecVideoTrackRenderer;
+import com.google.android.exoplayer.MediaFormat;
+import com.google.android.exoplayer.SingleSampleSource;
 import com.google.android.exoplayer.TrackRenderer;
 import com.google.android.exoplayer.audio.AudioCapabilities;
 import com.google.android.exoplayer.chunk.ChunkSampleSource;
@@ -39,21 +42,28 @@ import com.google.android.exoplayer.drm.MediaDrmCallback;
 import com.google.android.exoplayer.drm.StreamingDrmSessionManager;
 import com.google.android.exoplayer.drm.UnsupportedDrmException;
 import com.google.android.exoplayer.text.TextTrackRenderer;
+import com.google.android.exoplayer.text.webvtt.WebvttParser;
+import com.google.android.exoplayer.upstream.AssetDataSource;
 import com.google.android.exoplayer.upstream.DataSource;
 import com.google.android.exoplayer.upstream.DefaultAllocator;
 import com.google.android.exoplayer.upstream.DefaultBandwidthMeter;
 import com.google.android.exoplayer.upstream.DefaultUriDataSource;
 import com.google.android.exoplayer.upstream.UriDataSource;
 import com.google.android.exoplayer.util.ManifestFetcher;
+import com.google.android.exoplayer.util.MimeTypes;
 import com.google.android.exoplayer.util.Util;
 
 import android.content.Context;
 import android.media.AudioManager;
 import android.media.MediaCodec;
+import android.net.Uri;
 import android.os.Handler;
 import android.util.Log;
 
+import java.io.File;
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
 
 /**
  * A {@link RendererBuilder} for DASH.
@@ -65,7 +75,7 @@ public class DashRendererBuilder implements RendererBuilder {
   private static final int BUFFER_SEGMENT_SIZE = 64 * 1024;
   private static final int VIDEO_BUFFER_SEGMENTS = 200;
   private static final int AUDIO_BUFFER_SEGMENTS = 54;
-  private static final int TEXT_BUFFER_SEGMENTS = 2;
+  private static final int TEXT_BUFFER_SEGMENTS = 10;
   private static final int LIVE_EDGE_LATENCY_MS = 30000;
 
   private static final int SECURITY_LEVEL_UNKNOWN = -1;
@@ -76,20 +86,21 @@ public class DashRendererBuilder implements RendererBuilder {
   private final String userAgent;
   private final String url;
   private final MediaDrmCallback drmCallback;
-
+  private final String subtitle;
   private AsyncRendererBuilder currentAsyncBuilder;
 
   public DashRendererBuilder(Context context, String userAgent, String url,
-      MediaDrmCallback drmCallback) {
+      MediaDrmCallback drmCallback,String subtitle) {
     this.context = context;
     this.userAgent = userAgent;
     this.url = url;
     this.drmCallback = drmCallback;
+    this.subtitle=subtitle;
   }
 
   @Override
   public void buildRenderers(DemoPlayer player) {
-    currentAsyncBuilder = new AsyncRendererBuilder(context, userAgent, url, drmCallback, player);
+    currentAsyncBuilder = new AsyncRendererBuilder(context, userAgent, url, drmCallback, player,subtitle);
     currentAsyncBuilder.init();
   }
 
@@ -103,7 +114,7 @@ public class DashRendererBuilder implements RendererBuilder {
 
   private static final class AsyncRendererBuilder
       implements ManifestFetcher.ManifestCallback<MediaPresentationDescription>, UtcTimingCallback {
-
+    private String subtitle;
     private final Context context;
     private final String userAgent;
     private final MediaDrmCallback drmCallback;
@@ -116,11 +127,12 @@ public class DashRendererBuilder implements RendererBuilder {
     private long elapsedRealtimeOffset;
 
     public AsyncRendererBuilder(Context context, String userAgent, String url,
-        MediaDrmCallback drmCallback, DemoPlayer player) {
+        MediaDrmCallback drmCallback, DemoPlayer player,String subtitle) {
       this.context = context;
       this.userAgent = userAgent;
       this.drmCallback = drmCallback;
       this.player = player;
+      this.subtitle=subtitle;
       MediaPresentationDescriptionParser parser = new MediaPresentationDescriptionParser();
       manifestDataSource = new DefaultUriDataSource(context, userAgent);
       manifestFetcher = new ManifestFetcher<>(url, manifestDataSource, parser);
@@ -236,17 +248,12 @@ public class DashRendererBuilder implements RendererBuilder {
       TrackRenderer audioRenderer = new MediaCodecAudioTrackRenderer(audioSampleSource,
           MediaCodecSelector.DEFAULT, drmSessionManager, true, mainHandler, player,
           AudioCapabilities.getCapabilities(context), AudioManager.STREAM_MUSIC);
-
-      // Build the text renderer.
+//build Textrender......................................................................................
       DataSource textDataSource = new DefaultUriDataSource(context, bandwidthMeter, userAgent);
-      ChunkSource textChunkSource = new DashChunkSource(manifestFetcher,
-          DefaultDashTrackSelector.newTextInstance(), textDataSource, null, LIVE_EDGE_LATENCY_MS,
-          elapsedRealtimeOffset, mainHandler, player, DemoPlayer.TYPE_TEXT);
-      ChunkSampleSource textSampleSource = new ChunkSampleSource(textChunkSource, loadControl,
-          TEXT_BUFFER_SEGMENTS * BUFFER_SEGMENT_SIZE, mainHandler, player,
-          DemoPlayer.TYPE_TEXT);
+      SingleSampleSource textSampleSource = new SingleSampleSource(Uri.parse(subtitle),
+              textDataSource, MediaFormat.createTextFormat("0", MimeTypes.APPLICATION_SUBRIP, MediaFormat.NO_VALUE, C.MATCH_LONGEST_US, null));
       TrackRenderer textRenderer = new TextTrackRenderer(textSampleSource, player,
-          mainHandler.getLooper());
+              player.getMainHandler().getLooper());
 
       // Invoke the callback.
       TrackRenderer[] renderers = new TrackRenderer[DemoPlayer.RENDERER_COUNT];

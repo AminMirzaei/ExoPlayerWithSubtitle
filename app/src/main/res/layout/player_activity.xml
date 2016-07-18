@@ -20,7 +20,7 @@
     <View android:id="@+id/shutter"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@android:color/black"/>
+        android:background="@android:color/holo_purple"/>
 
     <com.google.android.exoplayer.text.SubtitleLayout android:id="@+id/subtitles"
         android:layout_width="match_parent"

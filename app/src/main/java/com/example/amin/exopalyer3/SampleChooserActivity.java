@@ -40,14 +40,13 @@ public class SampleChooserActivity extends Activity {
 
   @Override
   public void onCreate(Bundle savedInstanceState) {
+
     super.onCreate(savedInstanceState);
     setContentView(R.layout.sample_chooser_activity);
     final List<SampleGroup> sampleGroups = new ArrayList<>();
-    SampleGroup group = new SampleGroup("YouTube DASH");
-    group.addAll(Samples.YOUTUBE_DASH_MP4);
-    group.addAll(Samples.YOUTUBE_DASH_WEBM);
-    sampleGroups.add(group);
-    group = new SampleGroup("Widevine DASH Policy Tests (GTS)");
+
+
+    SampleGroup group = new SampleGroup("Widevine DASH Policy Tests (GTS)");
     group.addAll(Samples.WIDEVINE_GTS);
     sampleGroups.add(group);
     group = new SampleGroup("Widevine HDCP Capabilities Tests");
@@ -64,15 +63,6 @@ public class SampleChooserActivity extends Activity {
     group = new SampleGroup("Widevine DASH: MP4,H265");
     group.addAll(Samples.WIDEVINE_H265_MP4_CLEAR);
     group.addAll(Samples.WIDEVINE_H265_MP4_SECURE);
-    sampleGroups.add(group);
-    group = new SampleGroup("SmoothStreaming");
-    group.addAll(Samples.SMOOTHSTREAMING);
-    sampleGroups.add(group);
-    group = new SampleGroup("HLS");
-    group.addAll(Samples.HLS);
-    sampleGroups.add(group);
-    group = new SampleGroup("Misc");
-    group.addAll(Samples.MISC);
     sampleGroups.add(group);
     ExpandableListView sampleList = (ExpandableListView) findViewById(R.id.sample_list);
     sampleList.setAdapter(new SampleAdapter(this, sampleGroups));
@@ -91,7 +81,8 @@ public class SampleChooserActivity extends Activity {
         .setData(Uri.parse(sample.uri))
         .putExtra(PlayerActivity.CONTENT_ID_EXTRA, sample.contentId)
         .putExtra(PlayerActivity.CONTENT_TYPE_EXTRA, sample.type)
-        .putExtra(PlayerActivity.PROVIDER_EXTRA, sample.provider);
+        .putExtra(PlayerActivity.PROVIDER_EXTRA, sample.provider)
+        .putExtra(PlayerActivity.SUBTITLE_EXTRA,sample.subtitleUri);
     startActivity(mpdIntent);
   }
 

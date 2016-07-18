@@ -26,9 +26,6 @@ import com.google.android.exoplayer.audio.AudioCapabilitiesReceiver;
 import com.example.amin.exopalyer3.player.DashRendererBuilder;
 import com.example.amin.exopalyer3.player.DemoPlayer;
 import com.example.amin.exopalyer3.player.DemoPlayer.RendererBuilder;
-import com.example.amin.exopalyer3.player.ExtractorRendererBuilder;
-import com.example.amin.exopalyer3.player.HlsRendererBuilder;
-import com.example.amin.exopalyer3.player.SmoothStreamingRendererBuilder;
 import com.google.android.exoplayer.drm.UnsupportedDrmException;
 import com.google.android.exoplayer.metadata.id3.ApicFrame;
 import com.google.android.exoplayer.metadata.id3.GeobFrame;
@@ -89,7 +86,7 @@ public class PlayerActivity extends Activity implements SurfaceHolder.Callback, 
   public static final String CONTENT_ID_EXTRA = "content_id";
   public static final String CONTENT_TYPE_EXTRA = "content_type";
   public static final String PROVIDER_EXTRA = "provider";
-
+  public static final String SUBTITLE_EXTRA="subtitle";
   // For use when launching the demo app using adb.
   private static final String CONTENT_EXT_EXTRA = "type";
 
@@ -120,7 +117,6 @@ public class PlayerActivity extends Activity implements SurfaceHolder.Callback, 
   private DemoPlayer player;
   private DebugTextViewHelper debugViewHelper;
   private boolean playerNeedsPrepare;
-
   private long playerPosition;
   private boolean enableBackgroundAudio;
 
@@ -128,7 +124,7 @@ public class PlayerActivity extends Activity implements SurfaceHolder.Callback, 
   private int contentType;
   private String contentId;
   private String provider;
-
+  private String subtitle;
   private AudioCapabilitiesReceiver audioCapabilitiesReceiver;
 
   // Activity lifecycle
@@ -219,6 +215,7 @@ public class PlayerActivity extends Activity implements SurfaceHolder.Callback, 
         inferContentType(contentUri, intent.getStringExtra(CONTENT_EXT_EXTRA)));
     contentId = intent.getStringExtra(CONTENT_ID_EXTRA);
     provider = intent.getStringExtra(PROVIDER_EXTRA);
+    subtitle=intent.getStringExtra(SUBTITLE_EXTRA);
     configureSubtitleView();
     if (player == null) {
       if (!maybeRequestPermission()) {
@@ -298,14 +295,6 @@ public class PlayerActivity extends Activity implements SurfaceHolder.Callback, 
     }
   }
 
-  // Permission management methods
-
-  /**
-   * Checks whether it is necessary to ask for permission to read storage. If necessary, it also
-   * requests permission.
-   *
-   * @return true if a permission request is made. False if it is not necessary.
-   */
   @TargetApi(23)
   private boolean maybeRequestPermission() {
     if (requiresPermission(contentUri)) {
@@ -329,16 +318,9 @@ public class PlayerActivity extends Activity implements SurfaceHolder.Callback, 
   private RendererBuilder getRendererBuilder() {
     String userAgent = Util.getUserAgent(this, "ExoPlayerDemo");
     switch (contentType) {
-      case Util.TYPE_SS:
-        return new SmoothStreamingRendererBuilder(this, userAgent, contentUri.toString(),
-            new SmoothStreamingTestMediaDrmCallback());
       case Util.TYPE_DASH:
         return new DashRendererBuilder(this, userAgent, contentUri.toString(),
-            new WidevineTestMediaDrmCallback(contentId, provider));
-      case Util.TYPE_HLS:
-        return new HlsRendererBuilder(this, userAgent, contentUri.toString());
-      case Util.TYPE_OTHER:
-        return new ExtractorRendererBuilder(this, userAgent, contentUri);
+            new WidevineTestMediaDrmCallback(contentId, provider),subtitle);
       default:
         throw new IllegalStateException("Unsupported type: " + contentType);
     }
@@ -352,6 +334,7 @@ public class PlayerActivity extends Activity implements SurfaceHolder.Callback, 
       player.setMetadataListener(this);
       player.seekTo(playerPosition);
       playerNeedsPrepare = true;
+
       mediaController.setMediaPlayer(player.getPlayerControl());
       mediaController.setEnabled(true);
       eventLogger = new EventLogger();
